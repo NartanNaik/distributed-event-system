@@ -1,26 +1,33 @@
+"""
+=========================================================
+DISTRIBUTED PUB-SUB EVENT NOTIFICATION SYSTEM
+Component: Department Subscriber (Edge Node)
+Author: Farhaan
+Role: Subscribes to topics, updates local Lamport clock, 
+      and sends ACKs for critical distributed transactions.
+=========================================================
+"""
+
 import socket
 import json
 import sys
 
-
 def main():
-    # Validate command-line arguments
-    if len(sys.argv) != 3:
-        print("Usage: python department.py <department_name> <topic>")
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        print("Usage: python department.py <department_name> <topic> [broker_ip]")
         sys.exit(1)
 
     department_name = sys.argv[1]
     topic = sys.argv[2]
+    # UPDATED: Defaults to the correct LAN IP if not provided
+    broker_ip = sys.argv[3] if len(sys.argv) == 4 else "10.10.16.136"
 
-    # Initialize Lamport clock
     lamport_clock = 0
 
     try:
-        # Create persistent TCP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(("localhost", 9000))
+        client_socket.connect((broker_ip, 9000))
 
-        # Send SUBSCRIBE message immediately
         subscribe_message = {
             "type": "SUBSCRIBE",
             "department": department_name,
@@ -31,23 +38,19 @@ def main():
             (json.dumps(subscribe_message) + "\n").encode("utf-8")
         )
 
-        print(f"Registered to topic '{topic}' as '{department_name}'")
+        print(f"Registered to topic '{topic}' as '{department_name}' on Broker {broker_ip}:9000")
 
-        # Buffer for incoming stream data
         buffer = ""
 
-        # Infinite listening loop
         while True:
             data = client_socket.recv(1024)
 
-            # Connection closed
             if not data:
-                print("Broker connection closed.")
+                print("\nBroker connection closed. Shutting down.")
                 break
 
             buffer += data.decode("utf-8")
 
-            # Process newline-delimited JSON messages
             while "\n" in buffer:
                 message, buffer = buffer.split("\n", 1)
 
@@ -57,24 +60,20 @@ def main():
                 try:
                     event = json.loads(message)
 
-                    # Only process EVENT messages
                     if event.get("type") != "EVENT":
                         continue
 
                     received_lamport = event.get("lamport", 0)
 
-                    # Lamport clock update rule
                     lamport_clock = max(
                         lamport_clock,
                         received_lamport
                     ) + 1
 
-                    # Extract event data
                     topic_name = event.get("topic", "unknown")
                     event_data = event.get("data", "No Data")
                     tx_id = event.get("tx_id")
 
-                    # Critical event handling
                     if tx_id:
                         print(
                             f"[RECEIVED CRITICAL ALERT] "
@@ -82,7 +81,6 @@ def main():
                             f"Data: {event_data}"
                         )
 
-                        # Generate ACK
                         ack_message = {
                             "type": "ACK",
                             "department": department_name,
@@ -111,7 +109,8 @@ def main():
                     print(f"Invalid JSON received: {message}")
 
     except ConnectionRefusedError:
-        print("ERROR: Could not connect to broker on localhost:9000")
+        print(f"ERROR: Could not connect to broker at {broker_ip}:9000")
+        print("Check if the broker is running and the IP address is correct.")
 
     except KeyboardInterrupt:
         print("\nDisconnected from broker.")
@@ -124,7 +123,6 @@ def main():
             client_socket.close()
         except:
             pass
-
 
 if __name__ == "__main__":
     main()
