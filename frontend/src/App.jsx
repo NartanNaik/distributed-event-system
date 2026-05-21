@@ -1,5 +1,5 @@
 import React from 'react';
-import SmartCityDashboard from '../../SmartCityDashboard';
+import SmartCityDashboard from '../SmartCityDashboard';
 
 function App() {
   return (
