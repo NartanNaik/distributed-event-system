@@ -22,7 +22,7 @@ const StatusBadge = ({ status }) => {
     MEDIUM: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     LOW: 'bg-slate-800 text-slate-400 border-slate-600',
   };
-  
+
   // Default to LOW if status isn't matched
   const appliedStyle = styles[status] || styles.LOW;
 
@@ -35,33 +35,25 @@ const StatusBadge = ({ status }) => {
 
 export default function SmartCityDashboard() {
   const [isConnected, setIsConnected] = useState(true);
-  const [useMockData, setUseMockData] = useState(true);
+  const [useMockData, setUseMockData] = useState(false);
   const [systemState, setSystemState] = useState({
-    lamport: 142,
+    lamport: 0,
     events: [
-      { id: 1, time: '14:22:01', source: 'traffic-sensor', data: 'Wrong-way vehicle detected on Expressway', severity: 'CRITICAL' },
-      { id: 2, time: '14:22:05', source: 'weather-sensor', data: 'Wind speed 95 km/h — avoid tall structures', severity: 'MEDIUM' },
-      { id: 3, time: '14:22:12', source: 'pollution-sensor', data: 'PM2.5 levels spike to 210 μg/m³ in Zone 4', severity: 'HIGH' },
     ],
     subscribers: {
-      'traffic': ['traffic_police', 'transit_auth'],
-      'pollution': ['health_dept'],
-      'weather': ['disaster_mgmt'],
     },
     transactions: [
-      { tx_id: 'TX-99A2', status: 'COMMITTED', nodes: ['traffic_police'] },
-      { tx_id: 'TX-99B4', status: 'PREPARED', nodes: ['health_dept', 'disaster_mgmt'] }
     ]
   });
 
   // Mock Engine Simulation Loop
   useEffect(() => {
     if (!useMockData) return;
-    
+
     const interval = setInterval(() => {
       setSystemState(prev => {
         const nextClock = prev.lamport + Math.floor(Math.random() * 5) + 1;
-        
+
         const mockEventsList = [
           { s: 'weather-sensor', d: 'Heavy rain expected — possible waterlogging', v: 'MEDIUM' },
           { s: 'traffic-sensor', d: 'Major accident on Highway 5 — 3 vehicles involved', v: 'HIGH' },
@@ -70,7 +62,7 @@ export default function SmartCityDashboard() {
           { s: 'weather-sensor', d: 'Temperature hits 47°C — extreme heat advisory', v: 'HIGH' }
         ];
         const randomE = mockEventsList[Math.floor(Math.random() * mockEventsList.length)];
-        
+
         const newEvent = {
           id: Date.now(),
           time: new Date().toLocaleTimeString('en-US', { hour12: false }),
@@ -80,19 +72,19 @@ export default function SmartCityDashboard() {
         };
 
         // Progress transactions
-        let txList = prev.transactions.map(tx => 
+        let txList = prev.transactions.map(tx =>
           tx.status === 'PREPARED' && Math.random() > 0.4 ? { ...tx, status: 'COMMITTED' } : tx
         );
 
         // Generate new transactions for HIGH/CRITICAL events
         if (newEvent.severity === 'CRITICAL' || newEvent.severity === 'HIGH') {
-           const affectedTopic = newEvent.source.split('-')[0];
-           const participants = prev.subscribers[affectedTopic] || ['system_monitor'];
-           txList.unshift({
-             tx_id: `TX-${Math.random().toString(16).substr(2, 4).toUpperCase()}`,
-             status: 'PREPARED',
-             nodes: participants
-           });
+          const affectedTopic = newEvent.source.split('-')[0];
+          const participants = prev.subscribers[affectedTopic] || ['system_monitor'];
+          txList.unshift({
+            tx_id: `TX-${Math.random().toString(16).substr(2, 4).toUpperCase()}`,
+            status: 'PREPARED',
+            nodes: participants
+          });
         }
 
         return {
@@ -128,7 +120,7 @@ export default function SmartCityDashboard() {
 
   return (
     <div className="min-h-screen bg-[#050B14] text-slate-200 font-sans p-4 md:p-8 selection:bg-cyan-500/30">
-      
+
       {/* Background Ambience / Cyber Glow */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[120px]" />
@@ -136,7 +128,7 @@ export default function SmartCityDashboard() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        
+
         {/* Header HUD */}
         <header className="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-cyan-900/50 pb-6 mb-8 gap-6">
           <div>
@@ -151,14 +143,13 @@ export default function SmartCityDashboard() {
             </div>
             <p className="text-sm font-mono text-cyan-500/70 ml-7 tracking-widest uppercase">Distributed Event Notification System v2.0</p>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => setUseMockData(!useMockData)}
-            className={`font-mono text-xs px-4 py-2 rounded-lg border transition-all duration-300 hover:scale-105 ${
-              useMockData 
-                ? 'bg-purple-500/10 text-purple-400 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
+            className={`font-mono text-xs px-4 py-2 rounded-lg border transition-all duration-300 hover:scale-105 ${useMockData
+                ? 'bg-purple-500/10 text-purple-400 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
                 : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
-            }`}
+              }`}
           >
             {useMockData ? '⚡ SIMULATION OVERRIDE ACTIVE' : '🌐 LIVE BROKER UPLINK'}
           </button>
@@ -238,7 +229,7 @@ export default function SmartCityDashboard() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-950/50 p-2 rounded">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Awaiting ACK:</span>
-                      <span className="text-xs text-cyan-400 font-mono truncate">{tx.nodes.join(' + ')}</span>
+                      <span className="text-xs text-cyan-400 font-mono truncate">{(tx.nodes || []).join(' + ')}</span>
                     </div>
                   </div>
                 ))
@@ -252,7 +243,7 @@ export default function SmartCityDashboard() {
           </GlassCard>
 
         </main>
-        
+
         {/* Footer */}
         <footer className="mt-8 text-center text-[10px] font-mono text-cyan-900/60 uppercase tracking-widest border-t border-cyan-950 pt-4">
           Core Engine: Python TCP Broker • UI Render: React.js • Secure Distributed System Buffer
