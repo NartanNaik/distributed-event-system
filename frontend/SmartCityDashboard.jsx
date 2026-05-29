@@ -34,7 +34,7 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function SmartCityDashboard() {
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
   const [systemState, setSystemState] = useState({
     lamport: 0,
@@ -104,11 +104,34 @@ export default function SmartCityDashboard() {
 
     const fetchData = async () => {
       try {
-        const response = await fetch('http://16.171.16.165:5000/api/status');
+        const response = await fetch(
+          'http://16.171.16.165:5000/api/status',
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
-        setSystemState(data);
+
+        console.log('BROKER DATA:', data);
+
+        setSystemState({
+          lamport: data.lamport || 0,
+          events: data.events || [],
+          subscribers: data.subscribers || {},
+          transactions: data.transactions || []
+        });
+
         setIsConnected(true);
       } catch (err) {
+        console.error('Dashboard Fetch Error:', err);
         setIsConnected(false);
       }
     };
@@ -147,8 +170,8 @@ export default function SmartCityDashboard() {
           <button
             onClick={() => setUseMockData(!useMockData)}
             className={`font-mono text-xs px-4 py-2 rounded-lg border transition-all duration-300 hover:scale-105 ${useMockData
-                ? 'bg-purple-500/10 text-purple-400 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+              ? 'bg-purple-500/10 text-purple-400 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+              : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
               }`}
           >
             {useMockData ? '⚡ SIMULATION OVERRIDE ACTIVE' : '🌐 LIVE BROKER UPLINK'}
@@ -161,7 +184,11 @@ export default function SmartCityDashboard() {
           {/* Panel 1: Data Stream */}
           <GlassCard title="Live Pub-Sub Stream" icon="📡">
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-              {systemState.events.map((ev) => (
+              {systemState.events.length === 0 ? (
+                <div className="text-center py-10 text-slate-500 font-mono">
+                  Waiting for broker events...
+                </div>
+              ) : systemState.events.map((ev) => (
                 <div key={ev.id} className="group flex flex-col gap-1 bg-black/40 p-3 rounded-lg border border-slate-800 hover:border-cyan-500/30 transition-colors">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-cyan-500 font-mono text-xs tracking-wider">[{ev.time}]</span>
@@ -229,7 +256,9 @@ export default function SmartCityDashboard() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-950/50 p-2 rounded">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Awaiting ACK:</span>
-                      <span className="text-xs text-cyan-400 font-mono truncate">{(tx.nodes || []).join(' + ')}</span>
+                      <span className="text-xs text-cyan-400 font-mono truncate">
+                        {(tx.participants || tx.nodes || []).join(' + ')}
+                      </span>
                     </div>
                   </div>
                 ))
