@@ -163,7 +163,3 @@ The last 10 events and last 5 transactions are kept in memory.
 - Retry or re-delivery for aborted transactions
 - Authentication on the TCP channel
 - Replace polling with WebSockets for the dashboard
-
-## License
-
-Add a license of your choice (for example MIT) before publishing.
